@@ -1,6 +1,6 @@
 library(Seurat)
 library(tidyverse)
-
+library(plyr)
 BiocManager::install("DESeq2")
 library(DESeq2)
 
@@ -32,7 +32,19 @@ unique(RMS.noMYOD1$id)
 #Aggregate the counts based on the id of the sample and the newfusion status.
 Aggcounts <- AggregateExpression(RMS.noMYOD1, assays= "RNA",
                     group.by = c("id", "newfusion"),
-                    normalization.method = "LogNormalize")
+                    slot = "counts",
+                    return.seurat = TRUE)
 
-#get the matrix from the list, it is under RNA as you set assays to RNA. 
-Aggcountsmat <- Aggcounts$RNA
+Aggcounts$idnewfusion <- paste(Aggcounts$id, Aggcounts$newfusion, sep = "-")
+
+Idents(Aggcounts) <- "newfusion"
+unique(Aggcounts$newfusion)
+bulk.DE <- FindMarkers(object = Aggcounts,
+                       ident.1 = "FN-RMS",
+                       ident.2 = "FP-RMS",
+                       test.use = "DESeq2")
+
+class(bulk.DE)
+
+
+
