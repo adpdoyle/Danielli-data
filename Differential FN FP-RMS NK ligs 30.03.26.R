@@ -35,16 +35,32 @@ Aggcounts <- AggregateExpression(RMS.noMYOD1, assays= "RNA",
                     slot = "counts",
                     return.seurat = TRUE)
 
+Aggcounts.mat <- AggregateExpression(RMS.noMYOD1, assays= "RNA",
+                                 group.by = c("id", "newfusion"),
+                                 slot = "counts",
+                                 return.seurat = FALSE)
+#22 Apr 2026
 Aggcounts$idnewfusion <- paste(Aggcounts$id, Aggcounts$newfusion, sep = "-")
+unique(Aggcounts$id)
 
 Idents(Aggcounts) <- "newfusion"
 unique(Aggcounts$newfusion)
 bulk.DE <- FindMarkers(object = Aggcounts,
-                       ident.1 = "FN-RMS",
-                       ident.2 = "FP-RMS",
+                       ident.1 = "FP-RMS",
+                       ident.2 = "FN-RMS",
                        test.use = "DESeq2")
 
 class(bulk.DE)
 
+#when I looked in the bulk.DE dataframe all the NK ligs apart from ICAM1 and ENTPD1 were non-significant.
+#I tried to sense check and ChatGPT said between FP and FN fusion that the FOXO1 and PAX3 and 7 are upregulated but these weren't in bulkDE.
+#So don't think that the DE is accurate?.
 
+#Below is making the Aggcounts a dataframe then transposing to get Gene ID as columns and sample ID as rows which is then a large matrix.
+#From Aggcount.mat.t can start following that tutorial again. 
+Aggcounts.mat.mat <- as.data.frame(Aggcounts.mat)
+rm(Aggcounts.mat.mat)
 
+geneID <- row.names(Aggcounts.mat.mat)
+
+Aggcounts.mat.t <- t(Aggcounts.mat.mat)
