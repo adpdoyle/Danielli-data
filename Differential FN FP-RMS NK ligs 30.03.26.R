@@ -1,9 +1,8 @@
-library(dplyr)
 library(Seurat)
-library(patchwork)
-library(SeuratData)
-library(ggplot2)
-library(plyr)
+library(tidyverse)
+
+BiocManager::install("DESeq2")
+library(DESeq2)
 
 #Loading Danielli data
 RMS <- readRDS("RMS_atlas_final_20240130.rds")
@@ -14,6 +13,7 @@ RMS$newfusion <- mapvalues(x= RMS$fusion, from= c("PAX3::FOXO1", "PAX7::FOXO1"),
                            to= c("FP-RMS", "FP-RMS"))
 unique(RMS$newfusion)
 
+#removed MYOD1.
 RMS.noMYOD1 <- subset(RMS, subset = newfusion != "MYOD1")
 unique(RMS.noMYOD1$newfusion)
 length(RMS$newfusion) #107523
