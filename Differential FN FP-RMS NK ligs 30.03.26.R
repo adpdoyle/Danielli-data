@@ -50,7 +50,55 @@ bulk.DE <- FindMarkers(object = Aggcounts,
                        ident.2 = "FN-RMS",
                        test.use = "DESeq2")
 
-class(bulk.DE)
+head(bulk.DE, n= 15)
+
+bulk.DE.FNFP <- FindMarkers(object = Aggcounts,
+                       ident.1 = "FN-RMS",
+                       ident.2 = "FP-RMS",
+                       test.use = "DESeq2")
+
+#Remove NA from DGE dataframe.
+bulk.DE.noNA <- bulk.DE[!is.na(bulk.DE$p_val_adj), ]
+
+#Volcano plot of bulk.DE FP vs FN.
+library(ggplot2)
+ggplot(bulk.DE, aes(x= avg_log2FC, y= -log10(p_val_adj))) + geom_point()
+
+bulk.DE.noNA$diffexp[bulk.DE.noNA$avg_log2FC > 0 &
+                bulk.DE.noNA$p_val_adj < 0.05] <- "upregulated"
+
+bulk.DE.noNA$diffexp[bulk.DE.noNA$avg_log2FC < 0 &
+                  bulk.DE.noNA$p_val_adj < 0.05] <- "downregulated"
+
+bulk.DE.noNA$diffexp[bulk.DE.noNA$p_val_adj > 0.05] <- "not DE"
+
+volc1 <- ggplot(bulk.DE.noNA, aes(x= avg_log2FC, y= -log10(p_val_adj), colour = diffexp)) + 
+  geom_point(aes(colour = diffexp)) +
+  scale_colour_manual(values= mycolours) 
+volc1
+
+volc2 <- ggplot(bulk.DE.noNA, aes(x= avg_log2FC, y= -log10(p_val_adj), colour = diffexp)) + 
+  geom_point(aes(colour = diffexp)) +
+  scale_colour_manual(values= mycolours) +
+  geom_point(data = NK.ligs,
+             colour = "black") +
+  geom_label_repel(data = NK.ligs, aes(label = Gene_ID))
+
+volc2
+
+mycolours <- c("#D41159", "#1A85FF", "grey")
+
+ 
+names(mycolours) <- c("upregulated", "downregulated", "not DE")
+volc1
+
+
+library(tibble)
+library(ggrepel)
+bulk.DE <- rownames_to_column(bulk.DE, var = "Gene_ID")
+NK.ligs <- bulk.DE %>% 
+  filter(Gene_ID == "ENTPD1")
+#there are 3767 rows with NA, I think this is due to those genes having 0 values which is common in scRNA data. 
 
 #when I looked in the bulk.DE dataframe all the NK ligs apart from ICAM1 and ENTPD1 were non-significant.
 #I tried to sense check and ChatGPT said between FP and FN fusion that the FOXO1 and PAX3 and 7 are upregulated but these weren't in bulkDE.
