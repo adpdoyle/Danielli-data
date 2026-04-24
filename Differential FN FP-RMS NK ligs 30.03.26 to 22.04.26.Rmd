@@ -1,0 +1,211 @@
+---
+title: "Differential FN FP-RMS NK ligs 30.03 to 24.04.2026"
+author: "Amber Doyle"
+date: "`r Sys.Date()`"
+output:
+  word_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(Seurat)
+library(SeuratObject)
+library(DESeq2)
+library(plyr)
+library(ggplot2)
+library(tibble)
+library(ggrepel)
+```
+
+# Loading and subsetting Danielli data
+## Loading Danielli data
+```{r loading data}
+RMS <- readRDS("RMS_atlas_final_20240130.rds")
+unique(RMS$fusion)
+```
+
+## Renaming the PAX3::FOXO1 and PACX7::FOXO1 to have FP-RMS in newfusion metadata column.
+```{r grouping FP into one column newfusion}
+RMS$newfusion <- mapvalues(x= RMS$fusion, from= c("PAX3::FOXO1", "PAX7::FOXO1"),
+                           to= c("FP-RMS", "FP-RMS"))
+unique(RMS$newfusion)
+```
+
+## Removing MYOD1 patients
+```{r remove MYOD1 patients}
+RMS.noMYOD1 <- subset(RMS, subset = newfusion != "MYOD1")
+unique(RMS.noMYOD1$newfusion)
+```
+
+## Set the default assay to RNA not the integrated which is batch corrected.
+```{r set default assay to RNA}
+DefaultAssay(RMS.noMYOD1) <- "RNA"
+```
+
+## Aggregate counts based on the id of the sample and the newfusion status.
+```{r aggregate counts}
+Aggcounts <- AggregateExpression(RMS.noMYOD1, assays= "RNA",
+                    group.by = c("id", "newfusion"),
+                    slot = "counts",
+                    return.seurat = TRUE)
+```
+### Not sure about the normalization method as with AggregateExpression it uses log-normalization which is not appropriate for DESeq2 (DE used below) so how does it use it with the FindMarkers. Is this giving inaccurate results? Maybe try doing the DESeq2 tutorial seperately and see whether there are any differences in the results?
+
+
+# Differential expression of fusion positive vs fusion negative RMS. 
+### I used AggregateExpression then FindMarkers using FP and FN-RMS like  on this Seurat document [https://satijalab.org/seurat/articles/de_vignette](https://satijalab.org/seurat/articles/de_vignette). Bonferroni correction for adjusted p-value using FindMarkers.
+
+### Also Findmarkers uses Bonferroni whereas DESeq2 on its own uses BH and I think BH might be better than Bonferroni [https://www.nature.com/articles/nmeth.2900](https://www.nature.com/articles/nmeth.2900) for differential expression testing?
+
+```{r DGE FP vs FN RMS}
+Idents(Aggcounts) <- "newfusion"
+unique(Aggcounts$newfusion)
+bulk.DE <- FindMarkers(object = Aggcounts,
+                       ident.1 = "FP-RMS",
+                       ident.2 = "FN-RMS",
+                       test.use = "DESeq2")
+
+head(bulk.DE, n= 15)
+
+```
+### there are 3767 rows with NA, I think this is due to those genes having 0 values which is common in scRNA data.
+
+## Remove NA from DGE dataframe.
+```{r remove NA}
+bulk.DE.noNA <- bulk.DE[!is.na(bulk.DE$p_val_adj), ]
+```
+
+## Make the gene rownames into a column for filtering. 
+```{r rownames to column}
+bulk.DE.noNA <- rownames_to_column(bulk.DE.noNA, var =  "Gene_ID ") 
+```
+
+## Set new column naming genes as up or downregulated or not differentially expressed.
+```{r add DE status column}
+bulk.DE.noNA <- bulk.DE.noNA %>% 
+  mutate(gene_type = case_when(avg_log2FC > 0 & p_val_adj <= 0.05 ~ "Upregulated",
+                               avg_log2FC < 0 & p_val_adj <= 0.05 ~ "Downregulated",
+                               TRUE ~ "Not DE"))
+```
+
+## Seperate up and dowregulated genes in objects.
+```{r up and down reg objects}
+sig.F.up <- bulk.DE.noNA %>% 
+  filter(gene_type == "Upregulated")
+
+sig.F.down <- bulk.DE.noNA %>% 
+  filter(gene_type == "Downregulated")
+
+cols.F <- c("Upregulated" = "#D41159", "Downregulated" = "#1A85FF", "Not DE"= "grey")
+```
+
+# Visualization with volcano plots.
+## Volcano plot 1.
+```{r volcano plot 1}
+volc <- ggplot(bulk.DE.noNA,
+       aes(x= avg_log2FC,
+           y= -log10(p_val_adj))) +
+  geom_point(aes(colour = gene_type)) +
+  geom_point(data = sig.F.up,
+             colour = "#D41159") +
+  geom_point(data = sig.F.down,
+             colour = "#1A85FF") +
+  scale_colour_manual(values = cols.F) +
+  labs(colour = "FP vs FN") 
+```
+
+## Volcano plot with significant NK ligands.
+### When searching the NK ligs in the dataframe only ENTPD1 and ICAM1 were significant (p < 0.05) but both have low average log2FC.
+```{r significant NK ligs filtering}
+ICAM1.ENTPD1 <- bulk.DE.noNA %>% 
+  filter(Gene_ID == "ICAM1" | Gene_ID == "ENTPD1")
+
+View(ICAM1.ENTPD1)
+```
+
+```{r volcano plot with ICAM1 and ENTPD1 labelled}
+volc.ICAM1.ENTPD1 <- ggplot(bulk.DE.noNA,
+       aes(x= avg_log2FC,
+           y= -log10(p_val_adj))) +
+  geom_point(aes(colour = gene_type)) +
+  geom_point(data = sig.F.up,
+             colour = "#D41159") +
+  geom_point(data = sig.F.down,
+             colour = "#1A85FF") +
+  scale_colour_manual(values = cols.F) +
+  labs(colour = "FP vs FN") +
+  geom_point(data = ICAM1.ENTPD1,
+             colour = "darkblue") +
+  geom_label_repel(data = ICAM1.ENTPD1,
+                   aes(label = Gene_ID),
+                   nudge_y = 22,
+                   nudge_x = 1)
+
+volc.ICAM1.ENTPD1
+```
+
+## Volcano plot with top 10 differentially expressed genes labelled.
+```{r making top 10 DEG object}
+top10DE <- head(bulk.DE.noNA, n=10)
+```
+```{r volcano plot with top 10 DEG labelled}
+volc.top10DE <- ggplot(bulk.DE.noNA,
+       aes(x= avg_log2FC,
+           y= -log10(p_val_adj))) +
+  geom_point(aes(colour = gene_type)) +
+  geom_point(data = sig.F.up,
+             colour = "#D41159") +
+  geom_point(data = sig.F.down,
+             colour = "#1A85FF") +
+  scale_colour_manual(values = cols.F) +
+  labs(colour = "FP vs FN") +
+  geom_point(data = top10DE,
+             colour = "black") +
+  geom_label_repel(data = top10DE,
+                   aes(label = Gene_ID))
+
+volc.top10DE
+```
+
+## Volcano plot with top 5 up and downregulated genes labelled. 
+```{r creating top 5 up and down DEG objects}
+top5.up <- bulk.DE.noNA %>% 
+  filter(avg_log2FC > 0) %>% 
+  arrange(p_val_adj) %>% 
+  head(n= 5)
+
+top5.down <- bulk.DE.noNA %>% 
+  filter(avg_log2FC < 0) %>% 
+  arrange(p_val_adj) %>% 
+  head(n= 5)
+```
+```{r volcano plot with top 5 up and downregulated genes labelled}
+volc.top5.up.down <- ggplot(bulk.DE.noNA,
+                            aes(x= avg_log2FC,
+                                y= -log10(p_val_adj))) +
+  geom_point(aes(colour = gene_type)) +
+  geom_point(data = sig.F.up,
+             colour = "#D41159") +
+  geom_point(data = sig.F.down,
+             colour = "#1A85FF") +
+  scale_colour_manual(values = cols.F) +
+  labs(colour = "FP vs FN") +
+  geom_point(data = top5.up,
+             colour = "red") +
+  geom_point(data = top5.down,
+             colour= "darkblue") +
+  geom_label_repel(data = top5.up,
+                   aes(label = Gene_ID),
+                   nudge_x = 1.5,
+                   nudge_y = 10) +
+  geom_label_repel(data = top5.down,
+                   aes(label = Gene_ID),
+                   nudge_x = -1,
+                   nudge_y = 7)
+
+
+volc.top5.up.down
+```
+
+### Next steps: Will compare public microarray data to the AggregateExpression + Findmarkers and see how it matches and then try the separate DESeq2 method and compare that to public to see which is better. 

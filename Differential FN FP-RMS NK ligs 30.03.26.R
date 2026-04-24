@@ -63,7 +63,8 @@ bulk.DE.noNA <- bulk.DE[!is.na(bulk.DE$p_val_adj), ]
 
 #Make gene rownames into a column so can subset NK ligs out.
 library(tibble)
-bulk.DE.noNA <- rownames_to_column
+bulk.DE.noNA <- rownames_to_column(bulk.DE.noNA, var = "Gene_ID")
+
 
 #Label up and downregulated and no DE genes. 
 bulk.DE.noNA <- bulk.DE.noNA %>% 
@@ -81,6 +82,7 @@ cols.F <- c("Upregulated" = "#D41159", "Downregulated" = "#1A85FF", "Not DE"= "g
 
 ICAM1.ENTPD1 <- bulk.DE.noNA %>% 
   filter(Gene_ID == "ICAM1" | Gene_ID == "ENTPD1")
+View(ICAM1.ENTPD1)
 
 library(ggrepel)
 
