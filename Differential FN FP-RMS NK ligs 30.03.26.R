@@ -29,12 +29,13 @@ DefaultAssay(RMS.noMYOD1) <- "RNA"
 unique(RMS.noMYOD1$PatientID)
 unique(RMS.noMYOD1$id)
 
-#Aggregate the counts based on the id of the sample and the newfusion status.
+#Aggregate the counts based on the id of the sample and the newfusion status to seurat obj.
 Aggcounts <- AggregateExpression(RMS.noMYOD1, assays= "RNA",
                     group.by = c("id", "newfusion"),
                     slot = "counts",
                     return.seurat = TRUE)
 
+#Aggregate the counts based on the id of the sample and the newfusion status to non-seurat obj.
 Aggcounts.mat <- AggregateExpression(RMS.noMYOD1, assays= "RNA",
                                  group.by = c("id", "newfusion"),
                                  slot = "counts",
@@ -60,44 +61,48 @@ bulk.DE.FNFP <- FindMarkers(object = Aggcounts,
 #Remove NA from DGE dataframe.
 bulk.DE.noNA <- bulk.DE[!is.na(bulk.DE$p_val_adj), ]
 
-#Volcano plot of bulk.DE FP vs FN.
-library(ggplot2)
-ggplot(bulk.DE, aes(x= avg_log2FC, y= -log10(p_val_adj))) + geom_point()
-
-bulk.DE.noNA$diffexp[bulk.DE.noNA$avg_log2FC > 0 &
-                bulk.DE.noNA$p_val_adj < 0.05] <- "upregulated"
-
-bulk.DE.noNA$diffexp[bulk.DE.noNA$avg_log2FC < 0 &
-                  bulk.DE.noNA$p_val_adj < 0.05] <- "downregulated"
-
-bulk.DE.noNA$diffexp[bulk.DE.noNA$p_val_adj > 0.05] <- "not DE"
-
-volc1 <- ggplot(bulk.DE.noNA, aes(x= avg_log2FC, y= -log10(p_val_adj), colour = diffexp)) + 
-  geom_point(aes(colour = diffexp)) +
-  scale_colour_manual(values= mycolours) 
-volc1
-
-volc2 <- ggplot(bulk.DE.noNA, aes(x= avg_log2FC, y= -log10(p_val_adj), colour = diffexp)) + 
-  geom_point(aes(colour = diffexp)) +
-  scale_colour_manual(values= mycolours) +
-  geom_point(data = NK.ligs,
-             colour = "black") +
-  geom_label_repel(data = NK.ligs, aes(label = Gene_ID))
-
-volc2
-
-mycolours <- c("#D41159", "#1A85FF", "grey")
-
- 
-names(mycolours) <- c("upregulated", "downregulated", "not DE")
-volc1
-
-
+#Make gene rownames into a column so can subset NK ligs out.
 library(tibble)
+bulk.DE.noNA <- rownames_to_column
+
+#Label up and downregulated and no DE genes. 
+bulk.DE.noNA <- bulk.DE.noNA %>% 
+  mutate(gene_type = case_when(avg_log2FC > 0 & p_val_adj <= 0.05 ~ "Upregulated",
+                               avg_log2FC < 0 & p_val_adj <= 0.05 ~ "Downregulated",
+                               TRUE ~ "Not DE"))
+
+sig.F.up <- bulk.DE.noNA %>% 
+  filter(gene_type == "Upregulated")
+
+sig.F.down <- bulk.DE.noNA %>% 
+  filter(gene_type == "Downregulated")
+
+ICAM1.ENTPD1 <- bulk.DE.noNA %>% 
+  filter(Gene_ID == "ICAM1" | Gene_ID == "ENTPD1")
+
+cols.F <- c("Upregulated" = "#D41159", "Downregulated" = "#1A85FF", "Not DE"= "grey")
+
 library(ggrepel)
-bulk.DE <- rownames_to_column(bulk.DE, var = "Gene_ID")
-NK.ligs <- bulk.DE %>% 
-  filter(Gene_ID == "ENTPD1")
+
+volc.ICAM1.ENTPD1 <- ggplot(bulk.DE.noNA,
+       aes(x= avg_log2FC,
+           y= -log10(p_val_adj))) +
+  geom_point(aes(colour = gene_type)) +
+  geom_point(data = sig.F.up,
+             colour = "#D41159") +
+  geom_point(data = sig.F.down,
+             colour = "#1A85FF") +
+  scale_colour_manual(values = cols.F) +
+  labs(colour = "FP vs FN") +
+  geom_point(data = ICAM1.ENTPD1,
+             colour = "darkblue") +
+  geom_label_repel(data = ICAM1.ENTPD1,
+                   aes(label = Gene_ID),
+                   nudge_y = 22,
+                   nudge_x = 1)
+
+
+
 #there are 3767 rows with NA, I think this is due to those genes having 0 values which is common in scRNA data. 
 
 #when I looked in the bulk.DE dataframe all the NK ligs apart from ICAM1 and ENTPD1 were non-significant.
