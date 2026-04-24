@@ -77,10 +77,10 @@ sig.F.up <- bulk.DE.noNA %>%
 sig.F.down <- bulk.DE.noNA %>% 
   filter(gene_type == "Downregulated")
 
+cols.F <- c("Upregulated" = "#D41159", "Downregulated" = "#1A85FF", "Not DE"= "grey")
+
 ICAM1.ENTPD1 <- bulk.DE.noNA %>% 
   filter(Gene_ID == "ICAM1" | Gene_ID == "ENTPD1")
-
-cols.F <- c("Upregulated" = "#D41159", "Downregulated" = "#1A85FF", "Not DE"= "grey")
 
 library(ggrepel)
 
@@ -101,7 +101,62 @@ volc.ICAM1.ENTPD1 <- ggplot(bulk.DE.noNA,
                    nudge_y = 22,
                    nudge_x = 1)
 
+#volcano plot with top 10 differentially expressed genes. 
+top10DE <- head(bulk.DE.noNA, n=10)
 
+volc.top10DE <- ggplot(bulk.DE.noNA,
+       aes(x= avg_log2FC,
+           y= -log10(p_val_adj))) +
+  geom_point(aes(colour = gene_type)) +
+  geom_point(data = sig.F.up,
+             colour = "#D41159") +
+  geom_point(data = sig.F.down,
+             colour = "#1A85FF") +
+  scale_colour_manual(values = cols.F) +
+  labs(colour = "FP vs FN") +
+  geom_point(data = top10DE,
+             colour = "black") +
+  geom_label_repel(data = top10DE,
+                   aes(label = Gene_ID))
+
+volc.top10DE
+
+#Volcano plot with top 5 up and down reg genes.
+top5.up <- bulk.DE.noNA %>% 
+  filter(avg_log2FC > 0) %>% 
+  arrange(p_val_adj) %>% 
+  head(n= 5)
+
+top5.down <- bulk.DE.noNA %>% 
+  filter(avg_log2FC < 0) %>% 
+  arrange(p_val_adj) %>% 
+  head(n= 5)
+
+volc.top5.up.down <- ggplot(bulk.DE.noNA,
+                            aes(x= avg_log2FC,
+                                y= -log10(p_val_adj))) +
+  geom_point(aes(colour = gene_type)) +
+  geom_point(data = sig.F.up,
+             colour = "#D41159") +
+  geom_point(data = sig.F.down,
+             colour = "#1A85FF") +
+  scale_colour_manual(values = cols.F) +
+  labs(colour = "FP vs FN") +
+  geom_point(data = top5.up,
+             colour = "red") +
+  geom_point(data = top5.down,
+             colour= "darkblue") +
+  geom_label_repel(data = top5.up,
+                   aes(label = Gene_ID),
+                   nudge_x = 1.5,
+                   nudge_y = 10) +
+  geom_label_repel(data = top5.down,
+                   aes(label = Gene_ID),
+                   nudge_x = -1,
+                   nudge_y = 7)
+
+
+volc.top5.up.down
 
 #there are 3767 rows with NA, I think this is due to those genes having 0 values which is common in scRNA data. 
 
