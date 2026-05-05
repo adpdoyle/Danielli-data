@@ -22,7 +22,6 @@ levels(RMS.noMYOD1$fusion) <- c("PAX3::FOXO1", "PAX7::FOXO1", "FN-RMS")
 DefaultAssay(RMS.noMYOD1) <- "RNA"
 RMS.noMYOD1@active.assay
 
-
 NKligs.inhib <- c("CD274","PDCD1LG2","CLEC2D","LGALS9","COL18A1","COL4A1","COL4A2","ENTPD1", "NT5E","PVR", "PVRL2")
 
 NKligs.inhib.nocol <- c("CD274","PDCD1LG2","CLEC2D","LGALS9","ENTPD1", "NT5E","PVR", "PVRL2")
@@ -52,3 +51,35 @@ NKligs.act.dotplot <- DotPlot(RMS.noMYOD1, features = NKligs.act, scale.by = "si
   scale_colour_viridis(option = "viridis", direction = -1)
 NKligs.act.dotplot
 
+#Rename PAX7::FOXO1 and PAX3::FOXO1 to FP.
+RMS.noMYOD1$fusion <- gsub("PAX3::FOXO1", "FP", RMS.noMYOD1$fusion)
+unique(RMS.noMYOD1$fusion)
+
+RMS.noMYOD1$fusion <- gsub("PAX7::FOXO1", "FP", RMS.noMYOD1$fusion)
+unique(RMS.noMYOD1$fusion)
+
+RMS.noMYOD1$fusion <- gsub("FP", "FP-RMS", RMS.noMYOD1$fusion)
+unique(RMS.noMYOD1$fusion)
+
+#NK inhibitory ligands by FP vs FN with collagen.
+Idents(RMS.noMYOD1) <- RMS.noMYOD1$fusion
+
+NKligs.inhib.dotplot.FPFN <- DotPlot(RMS.noMYOD1, features = NKligs.inhib, scale.min = 0, scale.by = "size", scale = FALSE) + RotatedAxis() +
+  labs(y = "Fusion status", x= "Features") +
+  scale_colour_viridis(option = "viridis", direction = -1)
+
+NKligs.inhib.dotplot.FPFN
+
+#NK inhibitory ligands by FP vs FN wihout collagen.
+NKligs.inhib.nocol.dotplot.FPFN <- DotPlot(RMS.noMYOD1, features = NKligs.inhib.nocol, scale.min = 0, scale.by = "size", scale = FALSE) + RotatedAxis() +
+  labs(y = "Fusion status", x= "Features") +
+  scale_colour_viridis(option = "viridis", direction = -1)
+
+NKligs.inhib.nocol.dotplot.FPFN
+
+#NK activating ligands by FP vs FN. 
+NKligs.act.dotplot.FPFN <- DotPlot(RMS.noMYOD1, features = NKligs.act, scale.by = "size", scale = FALSE) + RotatedAxis() +
+  labs(y = "Fusion status", x= "Features") +
+  scale_colour_viridis(option = "viridis", direction = -1)
+
+NKligs.act.dotplot.FPFN
