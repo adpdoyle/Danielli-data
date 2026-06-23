@@ -12,6 +12,7 @@ unique(RMS$fusion)
 RMS$newfusion <- mapvalues(x= RMS$fusion, from= c("PAX3::FOXO1", "PAX7::FOXO1"),
                            to= c("FP-RMS", "FP-RMS"))
 unique(RMS$newfusion)
+packageVersion("plyr")
 
 #removed MYOD1.
 RMS.noMYOD1 <- subset(RMS, subset = newfusion != "MYOD1")
@@ -60,6 +61,7 @@ bulk.DE.FNFP <- FindMarkers(object = Aggcounts,
 
 #Remove NA from DGE dataframe.
 bulk.DE.noNA <- bulk.DE[!is.na(bulk.DE$p_val_adj), ]
+
 
 #Make gene rownames into a column so can subset NK ligs out.
 library(tibble)
