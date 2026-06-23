@@ -12,6 +12,11 @@ unique(RMS$fusion)
 RMS.noMYOD1 <- subset(RMS, subset = fusion != "MYOD1")
 unique(RMS.noMYOD1$fusion)
 
+#make newfusion to change PAX3::FOXO1 and PAX7::FOXO1 into PAX3-FOXO1 and PAX7-FOXO1.
+RMS.noMYOD1$newfusion <- mapvalues(x= RMS$fusion, from= c("PAX3::FOXO1", "PAX7::FOXO1"),
+                           to= c("PAX3-FOXO1", "PAX7-FOXO1"))
+unique(RMS.noMYOD1$newfusion)
+
 #Set the default assay to RNA not the integrated which is batch corrected. 
 DefaultAssay(RMS.noMYOD1) <- "RNA"
 
@@ -20,27 +25,22 @@ unique(RMS.noMYOD1$id)
 
 #Aggregate the counts based on the id of the sample and the newfusion status to seurat obj.
 Aggcounts <- AggregateExpression(RMS.noMYOD1, assays= "RNA",
-                    group.by = c("id", "fusion"),
+                    group.by = c("id", "newfusion"),
                     slot = "counts",
                     return.seurat = TRUE)
+unique(Aggcounts$newfusion)
 
-Idents(Aggcounts) <- "fusion"
-unique(Aggcounts$fusion)
+Idents(Aggcounts) <- "newfusion"
+unique(Aggcounts$newfusion)
 bulk.DE <- FindMarkers(object = Aggcounts,
-                       ident.1 = "FP-RMS",
-                       ident.2 = "FN-RMS",
+                       ident.1 = "PAX3-FOXO1",
+                       ident.2 = "PAX7-FOXO1",
                        test.use = "DESeq2")
 
 head(bulk.DE, n= 15)
 
-bulk.DE.FNFP <- FindMarkers(object = Aggcounts,
-                       ident.1 = "FN-RMS",
-                       ident.2 = "FP-RMS",
-                       test.use = "DESeq2")
-
 #Remove NA from DGE dataframe.
 bulk.DE.noNA <- bulk.DE[!is.na(bulk.DE$p_val_adj), ]
-
 
 #Make gene rownames into a column so can subset NK ligs out.
 library(tibble)
@@ -60,6 +60,9 @@ sig.F.down <- bulk.DE.noNA %>%
   filter(gene_type == "Downregulated")
 
 cols.F <- c("Upregulated" = "#D41159", "Downregulated" = "#1A85FF", "Not DE"= "grey")
+
+#NONE of the NK ligands are differentially expressed between PAX3 and PAX7 by searching.
+#So the below is still copied from the FN vs FP dge so can visualize this and label the NK ligands to show that they are not DE. 
 
 ICAM1.ENTPD1 <- bulk.DE.noNA %>% 
   filter(Gene_ID == "ICAM1" | Gene_ID == "ENTPD1")
