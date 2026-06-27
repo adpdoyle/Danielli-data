@@ -12,19 +12,25 @@ unique(RMS$fusion)
 RMS.noMYOD1 <- subset(RMS, subset = fusion != "MYOD1")
 unique(RMS.noMYOD1$fusion)
 
+#Remover FN-RMS.
+RMS.noMYOD1.noFN <- subset(RMS.noMYOD1, subset = fusion != "FN-RMS")
+unique(RMS.noMYOD1.noFN$fusion)
+
+
+
 #make newfusion to change PAX3::FOXO1 and PAX7::FOXO1 into PAX3-FOXO1 and PAX7-FOXO1.
-RMS.noMYOD1$newfusion <- mapvalues(x= RMS$fusion, from= c("PAX3::FOXO1", "PAX7::FOXO1"),
+RMS.noMYOD1.noFN$newfusion <- mapvalues(x= RMS.noMYOD1.noFN$fusion, from= c("PAX3::FOXO1", "PAX7::FOXO1"),
                            to= c("PAX3-FOXO1", "PAX7-FOXO1"))
-unique(RMS.noMYOD1$newfusion)
+unique(RMS.noMYOD1.noFN$newfusion)
 
 #Set the default assay to RNA not the integrated which is batch corrected. 
-DefaultAssay(RMS.noMYOD1) <- "RNA"
+DefaultAssay(RMS.noMYOD1.noFN) <- "RNA"
 
 unique(RMS.noMYOD1$PatientID)
 unique(RMS.noMYOD1$id)
 
 #Aggregate the counts based on the id of the sample and the newfusion status to seurat obj.
-Aggcounts <- AggregateExpression(RMS.noMYOD1, assays= "RNA",
+Aggcounts <- AggregateExpression(RMS.noMYOD1.noFN, assays= "RNA",
                     group.by = c("id", "newfusion"),
                     slot = "counts",
                     return.seurat = TRUE)
