@@ -95,7 +95,7 @@ NS <- bulk.DE.FNFP.noNA %>%
 
 cols.F <- c("Upregulated" = "#D41159", "Downregulated" = "#1A85FF", "Not significant"= "grey")
 
-#Volcano plot for inhibitory NK ligands. 
+#Volcano plot for inhibitory NK ligands. 26 June 2026. 
 Inhib.ligs <- bulk.DE.FNFP.noNA %>% 
   filter(Gene_ID == "ENTPD1" | Gene_ID == "CD274" | Gene_ID == "PDCD1LG2" | Gene_ID == "CLEC2D" | Gene_ID == "LGALS9" | Gene_ID == "NT5E" | Gene_ID == "PVR" | Gene_ID == "PVRL2")
 #NT5E NA in DGE so has been taken out of the bulk.DE.FNFP.noNA.
@@ -120,6 +120,32 @@ volc.ligs.inhib <- ggplot(bulk.DE.FNFP.noNA,
                    nudge_x = -1,
                    box.padding = 0.5)
 volc.ligs.inhib
+
+#Volcano plot for activating ligands. 26 June 2026.
+Act.ligs <- bulk.DE.FNFP.noNA %>% 
+  filter(Gene_ID == "CD48" | Gene_ID == "CD58" | Gene_ID == "NCR3LG1" | Gene_ID == "ICAM1" | Gene_ID == "MICA" | Gene_ID == "MICB" | Gene_ID == "PVR" | Gene_ID == "PVRL2"|
+           Gene_ID == "ULBP1" | Gene_ID == "ULBP2" | Gene_ID == "ULBP3" | Gene_ID == "RAET1E" | Gene_ID == "RAET1G" | Gene_ID == "RAET1L")
+
+volc.ligs.act <- ggplot(bulk.DE.FNFP.noNA,
+                          aes(x= avg_log2FC,
+                              y= -log10(p_val_adj))) +
+  geom_point(aes(colour = gene_type)) +
+  geom_point(data = sig.F.up,
+             colour = "#D41159") +
+  geom_point(data = sig.F.down,
+             colour = "#1A85FF") +
+  scale_colour_manual(values = cols.F) +
+  labs(colour = "FN- vs FP-RMS") +
+  geom_point(data = Act.ligs,
+             colour = "darkblue") +
+  geom_label_repel(data = Act.ligs,
+                   aes(label = Gene_ID),
+                   nudge_y = 62,
+                   nudge_x = 0,
+                   box.padding = 0.7,
+                   max.overlaps = Inf)
+
+volc.ligs.act
 
 
 ICAM1.ENTPD1 <- bulk.DE.noNA %>% 
