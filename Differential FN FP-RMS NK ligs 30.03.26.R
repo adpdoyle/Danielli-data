@@ -62,11 +62,11 @@ bulk.DE.FNFP <- FindMarkers(object = Aggcounts,
 #Remove NA from DGE dataframe.
 bulk.DE.noNA <- bulk.DE[!is.na(bulk.DE$p_val_adj), ]
 
-
+bulk.DE.FNFP.noNA <- bulk.DE.FNFP[!is.na(bulk.DE.FNFP$p_val_adj), ]
 #Make gene rownames into a column so can subset NK ligs out.
 library(tibble)
 bulk.DE.noNA <- rownames_to_column(bulk.DE.noNA, var = "Gene_ID")
-
+bulk.DE.FNFP.noNA <- rownames_to_column(bulk.DE.FNFP.noNA, var = "Gene_ID")
 
 #Label up and downregulated and no DE genes. 
 bulk.DE.noNA <- bulk.DE.noNA %>% 
@@ -74,13 +74,53 @@ bulk.DE.noNA <- bulk.DE.noNA %>%
                                avg_log2FC < 0 & p_val_adj <= 0.05 ~ "Downregulated",
                                TRUE ~ "Not DE"))
 
+bulk.DE.FNFP.noNA <- bulk.DE.FNFP.noNA %>% 
+  mutate(gene_type = case_when(avg_log2FC > 0 & p_val_adj <= 0.05 ~ "Upregulated",
+                               avg_log2FC < 0 & p_val_adj <= 0.05 ~ "Downregulated",
+                               TRUE ~ "Not significant"))
+
 sig.F.up <- bulk.DE.noNA %>% 
+  filter(gene_type == "Upregulated")
+
+sig.F.up <- bulk.DE.FNFP.noNA %>% 
   filter(gene_type == "Upregulated")
 
 sig.F.down <- bulk.DE.noNA %>% 
   filter(gene_type == "Downregulated")
+sig.F.down <- bulk.DE.FNFP.noNA %>% 
+  filter(gene_type == "Downregulated")
 
-cols.F <- c("Upregulated" = "#D41159", "Downregulated" = "#1A85FF", "Not DE"= "grey")
+NS <- bulk.DE.FNFP.noNA %>% 
+  filter(gene_type == "Not significant")
+
+cols.F <- c("Upregulated" = "#D41159", "Downregulated" = "#1A85FF", "Not significant"= "grey")
+
+#Volcano plot for inhibitory NK ligands. 
+Inhib.ligs <- bulk.DE.FNFP.noNA %>% 
+  filter(Gene_ID == "ENTPD1" | Gene_ID == "CD274" | Gene_ID == "PDCD1LG2" | Gene_ID == "CLEC2D" | Gene_ID == "LGALS9" | Gene_ID == "NT5E" | Gene_ID == "PVR" | Gene_ID == "PVRL2")
+#NT5E NA in DGE so has been taken out of the bulk.DE.FNFP.noNA.
+
+library(ggrepel)
+
+volc.ligs.inhib <- ggplot(bulk.DE.FNFP.noNA,
+                            aes(x= avg_log2FC,
+                                y= -log10(p_val_adj))) +
+  geom_point(aes(colour = gene_type)) +
+  geom_point(data = sig.F.up,
+             colour = "#D41159") +
+  geom_point(data = sig.F.down,
+             colour = "#1A85FF") +
+  scale_colour_manual(values = cols.F) +
+  labs(colour = "FN- vs FP-RMS") +
+  geom_point(data = Inhib.ligs,
+             colour = "darkblue") +
+  geom_label_repel(data = Inhib.ligs,
+                   aes(label = Gene_ID),
+                   nudge_y = 42,
+                   nudge_x = -1,
+                   box.padding = 0.5)
+volc.ligs.inhib
+
 
 ICAM1.ENTPD1 <- bulk.DE.noNA %>% 
   filter(Gene_ID == "ICAM1" | Gene_ID == "ENTPD1")
