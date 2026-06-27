@@ -64,13 +64,13 @@ cols.F <- c("Upregulated" = "#D41159", "Downregulated" = "#1A85FF", "Not DE"= "g
 #NONE of the NK ligands are differentially expressed between PAX3 and PAX7 by searching.
 #So the below is still copied from the FN vs FP dge so can visualize this and label the NK ligands to show that they are not DE. 
 
-ICAM1.ENTPD1 <- bulk.DE.noNA %>% 
-  filter(Gene_ID == "ICAM1" | Gene_ID == "ENTPD1")
-View(ICAM1.ENTPD1)
+Inhib.ligs <- bulk.DE.noNA %>% 
+  filter(Gene_ID == "ENTPD1" | Gene_ID == "CD274" | Gene_ID == "PDCD1LG2" | Gene_ID == "CLEC2D" | Gene_ID == "LGALS9" | Gene_ID == "NT5E" | Gene_ID == "PVR" | Gene_ID == "PVRL2")
+#LGALS9 is NA so doesn't come up on the list. 
 
 library(ggrepel)
 
-volc.ICAM1.ENTPD1 <- ggplot(bulk.DE.noNA,
+volc.Inhib <- ggplot(bulk.DE.noNA,
        aes(x= avg_log2FC,
            y= -log10(p_val_adj))) +
   geom_point(aes(colour = gene_type)) +
@@ -79,14 +79,14 @@ volc.ICAM1.ENTPD1 <- ggplot(bulk.DE.noNA,
   geom_point(data = sig.F.down,
              colour = "#1A85FF") +
   scale_colour_manual(values = cols.F) +
-  labs(colour = "FP vs FN") +
-  geom_point(data = ICAM1.ENTPD1,
+  labs(colour = "PAX3-FOXO1 vs PAX7-FOXO1") +
+  geom_point(data = Inhib.ligs,
              colour = "darkblue") +
-  geom_label_repel(data = ICAM1.ENTPD1,
+  geom_label_repel(data = Inhib.ligs,
                    aes(label = Gene_ID),
                    nudge_y = 22,
-                   nudge_x = 1)
-
+                   nudge_x = -3)
+volc.Inhib
 #volcano plot with top 10 differentially expressed genes. 
 top10DE <- head(bulk.DE.noNA, n=10)
 
