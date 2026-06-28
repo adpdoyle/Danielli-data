@@ -15,8 +15,12 @@ head(RMS@meta.data)
 
 RMS$allcells <- "ALL CELLS"
 
-qc <- VlnPlot(RMS, features = "nFeature_RNA", group.by = "allcells", pt.size = 0)
-qc
+qc <- VlnPlot(RMS, features = "nFeature_RNA", group.by = "allcells")
+qc + geom_jitter(data = qc$data,
+                 aes(colour = "clear"),
+                 alpha = 1,
+                 position = position_jitter(width = 0.2),
+                 size = 1)
 rm(qc)
 RMS.QC@assays$
 RMS.QC <- RMS
