@@ -79,5 +79,33 @@ wei_removed_count <- sum(
        RMS.fil$nFeature_RNA > 8000))
 
 wei.before.fil - wei_removed_count
+#Number of cells per dataset.
+table(RMS$origin)
 
+RMS$origin %>%
+  table() %>%
+  as.data.frame() %>%
+  ggplot(aes(x =., y = Freq)) +
+  geom_col(fill = "steelblue") +
+  theme_classic() +
+  labs(x = "Dataset", y = "Number of Cells") +
+  scale_y_continuous(breaks = seq(0, 60000, by= 5000))
+
+# Number of cells per sample 72. 
+sort(table(RMS$name))
+
+# Make a table of cell counts per sample 72.
+count_table <- as.data.frame(table(RMS$name))
+colnames(count_table) <- c("Sample", "Cell Count")
+
+# Write to CSV
+write.csv(count_table, "qc_cell_counts.csv", row.names = FALSE)
+
+
+
+
+
+
+unique(RMS$PatientID)
+RMS$name
 
