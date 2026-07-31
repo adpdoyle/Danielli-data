@@ -65,7 +65,55 @@ FeatureScatter(RMS.fil, feature1 = "nCount_RNA", feature2 = "nFeature_RNA", grou
 #There is still some cells below the filtering genes threshold of under 1000 for wei et al. and under 400 for Patel et al.
 #Do I need to filter this out as well? And if I do, do I need to reintegrate? Check with Dean on monday!.
 
-RMS.Wei.fil <- subset(RMS.fil, subset = (origin == "Wei at al." & nFeature_RNA >= 1000))
+#Filtered the cells which were less than 1000 for wei et al and less than 400 for patel et al.
+RMS.Wei.fil <- subset(RMS.fil, subset = (origin == "Wei et al." & nFeature_RNA >= 1000))
+
+RMS.wei.pat.fil <- subset(RMS.fil, subset = (origin== "Wei et al." & nFeature_RNA >=1000) |
+                            (origin == "Patel et al." & nFeature_RNA >= 400) |
+                            (origin == "Weng et al.") |
+                            (origin == "Danielli et al."))
+
+dim(RMS.wei.pat.fil) #10642 cells now after filtering. 
+
+RMS.wei.pat.fil$newfusion <- mapvalues(x= RMS$fusion, from= c("PAX3::FOXO1", "PAX7::FOXO1"),
+                           to= c("FP-RMS", "FP-RMS"))
+
+unique(RMS.wei.pat.fil.noMYOD1$newfusion)
+
+RMS.wei.pat.fil.noMYOD1 <- subset(RMS.wei.pat.fil, subset = newfusion != "MYOD1")
+
+DefaultAssay(RMS.wei.pat.fil.noMYOD1) <- "RNA"
+
+#Aggregate the counts based on the id of the sample and the newfusion status to seurat obj.
+Aggcounts <- AggregateExpression(RMS.wei.pat.fil.noMYOD1, assays= "RNA",
+                                 group.by = c("id", "newfusion"),
+                                 slot = "counts",
+                                 return.seurat = TRUE)
+Aggcounts$newfusion
+
+Idents(Aggcounts) <- "newfusion"
+
+bulk.DE.FNFP <- FindMarkers(object = Aggcounts,
+                            ident.1 = "FN-RMS",
+                            ident.2 = "FP-RMS",
+                            test.use = "DESeq2")
+
+bulk.DE.FNFP.noNA <- bulk.DE.FNFP[!is.na(bulk.DE.FNFP$p_val_adj), ]
+
+#Make gene rownames into a column so can subset NK ligs out.
+library(tibble)
+bulk.DE.FNFP.noNA <- rownames_to_column(bulk.DE.FNFP.noNA, var = "Gene_ID")
+
+bulk.DE.FNFP.noNA <- bulk.DE.FNFP.noNA %>% 
+  mutate(gene_type = case_when(avg_log2FC > 0 & p_val_adj <= 0.05 ~ "Upregulated",
+                               avg_log2FC < 0 & p_val_adj <= 0.05 ~ "Downregulated",
+                               TRUE ~ "Not significant"))
+
+#Redid the DGE and has not changed anything!!!. 
+
+
+FeatureScatter(RMS.wei.pat.fil, feature1 = "nCount_RNA", feature2 = "nFeature_RNA", group.by = "origin", split.by = "origin") + NoLegend() +
+  scale_y_continuous(breaks = seq(0, 8000, by= 1000))
 
 wei.before.fil <- sum(RMS.fil$origin == "Wei et al.")
 wei.after.fil <- sum(RMS.Wei.fil$origin == "Wei et al.")
@@ -102,10 +150,20 @@ colnames(count_table) <- c("Sample", "Cell Count")
 write.csv(count_table, "qc_cell_counts.csv", row.names = FALSE)
 
 
+# Quick check: what's their mito like?
+RMS$below_wei_threshold <- RMS$origin == "Wei et al." & RMS$nFeature_RNA < 1000
+VlnPlot(RMS, features = "percent.mt", group.by = "below_wei_threshold", pt.size = 0)
 
+RMS.fil$below_wei_threshold <- RMS.fil$origin == "Wei et al." & RMS.fil$nFeature_RNA < 1000
+VlnPlot(RMS.fil, features = "percent.mt", group.by = "below_wei_threshold", pt.size = 0)
 
-
-
+VlnPlot(RMS.fil, features = "nCount_RNA", group.by = "below_wei_threshold", pt.size=0)
 unique(RMS$PatientID)
 RMS$name
 
+# See what slots exist in the RNA assay
+GetAssayData(RMS, assay = "RNA", layer = "counts")[1:5, 1:5]
+GetAssayData(RMS, assay = "RNA", layer = "data")[1:5, 1:5]
+GetAssayData(RMS, assay = "RNA", layer =  "scale.data")[1:5, 1:5]
+#the counts layer has integers whereas data has decimals which means counts is raw and data is normalized.
+#AI says that when you set RNA as default it pulls from the normalized data not the counts. 
