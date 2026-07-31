@@ -53,3 +53,31 @@ table(Idents(RMS)) - table(Idents(RMS.fil))
 #Violin plot of mito genes after filtering.
 VlnPlot(RMS.fil, features = "percent.mt", group.by = "origin", pt.size = 0, combine = TRUE) + NoLegend() +
   ggplot2::labs(x= "Dataset", y= "Percent mitochondrial genes (%)", title = NULL)
+
+#Scatter comparing nFeature to percent mito
+FeatureScatter(RMS, feature1 = "percent.mt", feature2 = "nFeature_RNA", group.by = "origin", split.by = "origin") 
+
+FeatureScatter(RMS.fil, feature1 = "percent.mt", feature2 = "nFeature_RNA", group.by = "origin", split.by = "origin") + NoLegend()
+
+#Scatter of nFeature and nCount.
+FeatureScatter(RMS.fil, feature1 = "nCount_RNA", feature2 = "nFeature_RNA", group.by = "origin", split.by = "origin") + NoLegend() +
+  scale_y_continuous(breaks = seq(0, 8000, by= 1000))
+#There is still some cells below the filtering genes threshold of under 1000 for wei et al. and under 400 for Patel et al.
+#Do I need to filter this out as well? And if I do, do I need to reintegrate? Check with Dean on monday!.
+
+RMS.Wei.fil <- subset(RMS.fil, subset = (origin == "Wei at al." & nFeature_RNA >= 1000))
+
+wei.before.fil <- sum(RMS.fil$origin == "Wei et al.")
+wei.after.fil <- sum(RMS.Wei.fil$origin == "Wei et al.")
+unique(RMS.Wei.fil$origin)
+rm(RMS.Wei.fil)
+
+# Count Wei cells that fall outside the thresholds
+wei_removed_count <- sum(
+  RMS.fil$origin == "Wei et al." &
+    (RMS.fil$nFeature_RNA < 1000 |
+       RMS.fil$nFeature_RNA > 8000))
+
+wei.before.fil - wei_removed_count
+
+
