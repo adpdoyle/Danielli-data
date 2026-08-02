@@ -102,6 +102,20 @@ DimPlot(RMS.wei.pat.fil.noMYOD1, reduction = "umap_rpca", pt.size = 1, cols = c(
                                                                                 "#7A67EE",
                                                                                 "#00688B"))
 
+Idents(RMS.wei.pat.fil.noMYOD1) <- RMS.wei.pat.fil.noMYOD1$model
+DimPlot(RMS.wei.pat.fil.noMYOD1, reduction = "umap_rpca", pt.size = 1, cols = c("#FF8247",
+                                                                                
+                                                                                "#7A67EE",
+                                                                                "#00688B",
+                                                                                "#EEAD0E"))
+
+Idents(RMS.wei.pat.fil.noMYOD1) <- RMS.wei.pat.fil.noMYOD1$origin
+DimPlot(RMS.wei.pat.fil.noMYOD1, reduction = "umap_rpca", pt.size = 1, cols = c("#FF8247",
+                                                                                
+                                                                                "#7A67EE",
+                                                                                "#00688B",
+                                                                                "#EEAD0E"))
+
 
 RMS.wei.pat.fil.noMYOD1$fusion <- factor(RMS.wei.pat.fil.noMYOD1$fusion,
                                          levels = c("FN-RMS", "PAX3::FOXO1", "PAX7::FOXO1"))
